@@ -6,7 +6,7 @@ def __default_transformer__(frame, **kwargs):
         return frame
     else:
         next = numpy.copy(frame)
-        weight = len(output_frames)
+        weight = len(output_frames) / 2
 
         for row_index in range(len(next)):
             for col_index in range(len(next[row_index])):
