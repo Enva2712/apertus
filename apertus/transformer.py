@@ -35,12 +35,3 @@ class Transformer:
 
     def __iter__(self):
         return self.transform()
-
-def apertus(frame_array):
-    new_frames = []
-    for i in range(len(frame_array)):
-        if i == 0:
-            new_frames.append(numpy.copy(frame_array[i]))
-        else:
-            new_frames.append(average_frames(frame_array[i], frame_array[i-1], weight=i-1))
-    return new_frames
