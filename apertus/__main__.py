@@ -2,7 +2,7 @@
 
 import argparse
 import cv2
-import numpy
+from . import Transformer
 
 def get_args():
     p = argparse.ArgumentParser(description="Create exposure lapses")
@@ -12,20 +12,10 @@ def get_args():
     args = p.parse_args()
     return args
 
-def average_frames(current, last, weight=1):
-    next = numpy.copy(current)
-    for row_index in range(len(next)):
-        for col_index in range(len(next[row_index])):
-            for chan_index in range(len(next[row_index, col_index])):
-                color = next[row_index, col_index, chan_index]
-                last_color = last[row_index, col_index, chan_index]
-                next[row_index, col_index, chan_index] = round((color + last_color * weight) / (weight + 1))
-    return next
-
-if __name__ == "__main__":
+def main():
     args = get_args()
 
-    # Set up video capture and video writer
+    ## Set up cv2 file reader and writer
     cap = cv2.VideoCapture(args.file)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # cap.get(cv2.CAP_PROP_FOURCC)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -33,25 +23,23 @@ if __name__ == "__main__":
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     writer = cv2.VideoWriter(args.output, fourcc, fps, (width, height))
 
-    last_frame = None
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    for i in range(1, frame_count):
-        got_frame, frame = cap.read()
+    def get_frames():
+        while 1:
+            has_frame, frame = cap.read()
+            if not has_frame:
+                break
+            yield frame
 
-        if not got_frame:
-            # End of video capture
-            break
+    transformer = Transformer()
+    transformer.source(get_frames)
 
-        if last_frame is None:
-            # First frame is just copied over
-            next_frame = frame
-        else:
-            # All other frames are the weighted average of themselves with the previous frame
-            next_frame = average_frames(frame, last_frame, weight=(i-1))
-        print("%s%% done (frame %s)" % (round(100 * i/frame_count), i))
-        writer.write(next_frame)
-        last_frame = next_frame
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    for i,frame in enumerate(transformer):
+        print("%s%% done (frame %s)." % (round(100 * (i+1) / frame_count), i+1))
+        writer.write(frame)
 
-    # Clean up
     cap.release()
     writer.release()
+
+if __name__ == "__main__":
+    main()
